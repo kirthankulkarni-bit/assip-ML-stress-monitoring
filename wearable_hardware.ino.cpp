@@ -4,6 +4,10 @@ using namespace Eloquent::ML::Port;
 
 StressModel randomForest;
 
+#define GSR_PIN A0
+#define SENSOR_MIN_THRESHOLD 10   
+#define SENSOR_MAX_THRESHOLD 4085
+
 void setup() {
     Serial.begin(115200);
     randomForest.begin();
