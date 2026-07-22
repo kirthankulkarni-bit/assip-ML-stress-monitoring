@@ -1,9 +1,10 @@
-#include "StressModel (1).h"
+#include "StressModel.h"
 
 using namespace Eloquent::ML::Port;
 
 stressModel randomForest;
 
+#define MOTOR_PIN D10
 #define EDA_PIN A0
 #define windowSize 30
 #define SENSOR_MIN_THRESHOLD 10   
@@ -41,6 +42,8 @@ void setup() {
     Serial.begin(115200);
     delay(5000);
     pinMode(EDA_PIN, INPUT);
+    pinMode(MOTOR_PIN, OUTPUT);
+    analogWrite(MOTOR_PIN, 0);
 
     // buffer initialization
     for(int k = 0; k < windowSize; k++) {
@@ -88,6 +91,23 @@ void loop() {
     // create feature array for prediction
     float live_features[] = { eda_mean, eda_std, eda_max, eda_min, bvp_hr_bpm };
 
+    float mean_eda_mean = 512.0f; 
+    float std_eda_mean  = 50.0f;
+    float mean_eda_std = 512.0f;
+    float std_eda_std  = 50.0f;
+    float mean_eda_max = 512.0f;
+    float std_eda_max  = 50.0f;
+    float mean_eda_min = 512.0f;
+    float std_eda_min  = 50.0f;
+    float mean_bvp_hr = 75.0f;
+    float std_bvp_hr  = 10.0f;
+
+    live_features[0] = (eda_mean - mean_eda_mean) / std_eda_mean;
+    live_features[1] = (eda_std - mean_eda_std) / std_eda_std;
+    live_features[2] = (eda_max - mean_eda_max) / std_eda_max;
+    live_features[3] = (eda_min - mean_eda_min) / std_eda_min;
+    live_features[4] = (bvp_hr_bpm - mean_bvp_hr) / std_bvp_hr;
+
     // run prediction using the trained model
     int prediction = randomForest.predict(live_features);
 
@@ -98,11 +118,29 @@ void loop() {
     Serial.print(" | HR: "); Serial.print(bvp_hr_bpm);
     Serial.print(" | Prediction: "); Serial.println(prediction);
 
-
     if(prediction == 1) {
-        Serial.println("stress detected");
+       Serial.println("stress detected");
+       Serial.println("triggering biofeedback, inhale");
+      for(int k = 0; k <= 200; k += 10) {
+       analogWrite(MOTOR_PIN, k);
+       delay(100);
+     }
+
+      delay(1000);
+  
+    Serial.println("triggering biofeedback, exhale");
+     for(int k = 200; k >= 0; k -= 10) {
+       analogWrite(MOTOR_PIN, k);
+       delay(100);
+     }
+
+     analogWrite(MOTOR_PIN, 0);
+
+     delay(5000);
+
     } else {
        Serial.println("baseline");
+       analogWrite(MOTOR_PIN, 0);
     }
 
     delay(5000); 
